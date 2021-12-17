@@ -322,10 +322,11 @@ class Version(object):
         This is a composite of the product release cycle stage (rc, beta etc) and the version in that cycle - e.g. 23.
 
     """
-    def __init__(self, raw_version, autopilot_type, vehicle_type):
+    def __init__(self, raw_version, raw_commit, autopilot_type, vehicle_type):
         self.autopilot_type = autopilot_type
         self.vehicle_type = vehicle_type
         self.raw_version = raw_version
+        self.raw_commit = raw_commit
         if raw_version is None:
             self.major = None
             self.minor = None
@@ -391,7 +392,11 @@ class Version(object):
             # e.g. "-rc23"
             release_type = "-" + str(self.release_type()) + str(self.release_version())
 
-        return prefix + "%s.%s.%s" % (self.major, self.minor, self.patch) + release_type
+        commit = ""
+        if type(self.raw_commit) is list:
+            commit = " (%s)" % "".join(chr(i) for i in self.raw_commit)
+
+        return prefix + "%s.%s.%s" % (self.major, self.minor, self.patch) + release_type + commit
 
 
 class Capabilities:
@@ -1168,13 +1173,14 @@ class Vehicle(HasObservers):
         def listener(vehicle, name, m):
             self._capabilities = m.capabilities
             self._raw_version = m.flight_sw_version
+            self._raw_commit = m.flight_custom_version
             self._autopilot_version_msg_count += 1
             if self._capabilities != 0 or self._autopilot_version_msg_count > 5:
                 # ArduPilot <3.4 fails to send capabilities correctly
                 # straight after boot, and even older versions send
                 # this back as always-0.
                 vehicle.remove_message_listener('HEARTBEAT', self.send_capabilities_request)
-            self.notify_attribute_listeners('autopilot_version', self._raw_version)
+            self.notify_attribute_listeners('autopilot_version', self._raw_version, self._raw_commit)
 
         # gimbal
         self._gimbal = Gimbal(self)
@@ -1757,7 +1763,7 @@ class Vehicle(HasObservers):
 
         .. versionadded:: 2.0.3
         """
-        return Version(self._raw_version, self._autopilot_type, self._vehicle_type)
+        return Version(self._raw_version, self._raw_commit, self._autopilot_type, self._vehicle_type)
 
     @property
     def capabilities(self):
