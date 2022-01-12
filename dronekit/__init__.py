@@ -242,7 +242,7 @@ class Wind(object):
         self.wind_direction = wind_direction
         self.wind_speed = wind_speed
         self.wind_speed_z = wind_speed_z
-    
+
     def __str__(self):
         return "Wind: wind direction: {}, wind speed: {}, wind speed z: {}".format(self.wind_direction, self.wind_speed, self.wind_speed_z)
 
@@ -394,7 +394,8 @@ class Version(object):
 
         commit = ""
         if type(self.raw_commit) is list:
-            commit = " (%s)" % "".join(chr(i) for i in self.raw_commit)
+            # 7 characters is git default for SHA hash; raw_commit is null-terminated, last character is not printable
+            commit = " (%s)" % "".join(chr(i) for i in self.raw_commit[:-1])
 
         return prefix + "%s.%s.%s" % (self.major, self.minor, self.patch) + release_type + commit
 
@@ -1167,6 +1168,7 @@ class Vehicle(HasObservers):
 
         self._capabilities = None
         self._raw_version = None
+        self._raw_commit = None
         self._autopilot_version_msg_count = 0
 
         @self.on_message('AUTOPILOT_VERSION')
@@ -1400,11 +1402,11 @@ class Vehicle(HasObservers):
 
         @handler.forward_loop
         def listener(_):
-            # Send 1 heartbeat per second
-            if monotonic.monotonic() - self._heartbeat_lastsent > 1:
-                self._master.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS,
-                                                mavutil.mavlink.MAV_AUTOPILOT_INVALID, 0, 0, 0)
-                self._heartbeat_lastsent = monotonic.monotonic()
+            # Do not send 1 heartbeat per second by default
+            # if monotonic.monotonic() - self._heartbeat_lastsent > 1:
+            #     self._master.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS,
+            #                                     mavutil.mavlink.MAV_AUTOPILOT_INVALID, 0, 0, 0)
+            #     self._heartbeat_lastsent = monotonic.monotonic()
 
             # Timeouts.
             if self._heartbeat_started:
