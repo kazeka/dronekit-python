@@ -1169,6 +1169,7 @@ class Vehicle(HasObservers):
         self._capabilities = None
         self._raw_version = None
         self._raw_commit = None
+        self._raw_uid = None
         self._autopilot_version_msg_count = 0
 
         @self.on_message('AUTOPILOT_VERSION')
@@ -1176,6 +1177,10 @@ class Vehicle(HasObservers):
             self._capabilities = m.capabilities
             self._raw_version = m.flight_sw_version
             self._raw_commit = m.flight_custom_version
+            if len(m.uid2) > 0:
+                self._raw_uid = m.uid2
+            else:
+                self._raw_uid = m.uid 
             self._autopilot_version_msg_count += 1
             if self._capabilities != 0 or self._autopilot_version_msg_count > 5:
                 # ArduPilot <3.4 fails to send capabilities correctly
@@ -1766,6 +1771,14 @@ class Vehicle(HasObservers):
         .. versionadded:: 2.0.3
         """
         return Version(self._raw_version, self._raw_commit, self._autopilot_type, self._vehicle_type)
+
+    @property
+    def uid(self):
+        """
+        The autopilot UID.
+
+        """
+        return bytes(self._raw_uid).hex()
 
     @property
     def capabilities(self):
