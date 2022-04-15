@@ -1778,7 +1778,16 @@ class Vehicle(HasObservers):
         The autopilot UID.
 
         """
-        return bytes(self._raw_uid).hex()
+        # raw_uid sequence consists of 4 4-byte chunks
+        # each chunk should be reversed before converting to bytes
+        bytes_per_chunk = 4
+
+        uid_str = ""
+        for i in range(1, 5):
+            chunk = self._raw_uid[(i-1)*bytes_per_chunk : i*bytes_per_chunk][::-1]
+            uid_str += bytes(chunk).hex()
+
+        return uid_str
 
     @property
     def capabilities(self):
